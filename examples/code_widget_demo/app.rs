@@ -45,6 +45,7 @@ impl CodeWidgetDemo {
         state.source.set_source_string(SAMPLE_RUST_CODE);
         state.display.show_outline = true;
         state.display.show_line_numbers = true;
+        state.display.highlight_current_line = true;
         Self {
             state,
             code_area: Rect::default(),

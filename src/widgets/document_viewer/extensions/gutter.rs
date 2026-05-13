@@ -5,6 +5,10 @@ use ratatui::{
     style::{Color, Style},
 };
 
+const GUTTER_BG: Color = Color::Rgb(10, 14, 20);
+const LINE_NUMBER_FG: Color = Color::Rgb(70, 80, 100);
+const SEPARATOR_FG: Color = Color::Rgb(45, 52, 70);
+
 use crate::widgets::document_viewer::state::{DisplaySettings, ScrollState};
 
 /// Calculates the line-number gutter width for a document.
@@ -35,6 +39,9 @@ pub fn render_gutter(
         (line_index + 1).to_string()
     };
     let number_width = width.saturating_sub(3);
-    let text = format!("{number:>number_width$} │ ");
-    buf.set_stringn(x, y, text, width, Style::default().fg(Color::DarkGray));
+    let number_text = format!("{number:>number_width$} ");
+    let number_style = Style::default().fg(LINE_NUMBER_FG).bg(GUTTER_BG);
+    let separator_style = Style::default().fg(SEPARATOR_FG).bg(GUTTER_BG);
+    buf.set_stringn(x, y, number_text, number_width + 1, number_style);
+    buf.set_stringn(x + number_width as u16 + 1, y, "│ ", 2, separator_style);
 }

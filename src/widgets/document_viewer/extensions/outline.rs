@@ -7,6 +7,12 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Widget},
 };
 
+const PANEL_BG: Color = Color::Rgb(30, 32, 38);
+const BORDER_FG: Color = Color::Rgb(138, 99, 210);
+const TEXT_FG: Color = Color::Rgb(160, 160, 160);
+const HOVER_BG: Color = Color::Rgb(60, 60, 70);
+const COMPACT_LINE_FG: Color = Color::Rgb(120, 120, 130);
+
 use crate::widgets::document_viewer::foundation::DocumentOutlineItem;
 
 /// Renders document outline entries as a TOC overlay.
@@ -20,6 +26,7 @@ pub fn render_outline(
     let Some(toc_area) = outline_overlay_area(area, outline.len(), hovered) else {
         return;
     };
+    fill_background(toc_area, buf, Style::default().bg(PANEL_BG));
     render_outline_block(toc_area, buf);
     let inner = outline_inner_area(toc_area);
     if hovered {
@@ -76,12 +83,25 @@ fn outline_inner_area(area: Rect) -> Rect {
 
 /// Renders the outline block chrome.
 fn render_outline_block(area: Rect, buf: &mut Buffer) {
+    let panel_style = Style::default().bg(PANEL_BG);
     Block::default()
         .title(" TOC ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::DarkGray))
+        .border_style(Style::default().fg(BORDER_FG).bg(PANEL_BG))
+        .style(panel_style)
         .render(area, buf);
+}
+
+/// Fills a rectangle with a style before overlay chrome is drawn.
+fn fill_background(area: Rect, buf: &mut Buffer, style: Style) {
+    for y in area.y..area.y + area.height {
+        for x in area.x..area.x + area.width {
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_char(' ').set_style(style);
+            }
+        }
+    }
 }
 
 /// Renders expanded outline entries.
@@ -95,9 +115,9 @@ fn render_expanded_entries(
         let prefix = "  ".repeat(item.level.min(3));
         let text = format!("{prefix}{}", item.title);
         let style = if hovered_entry == Some(row) {
-            Style::default().fg(Color::Black).bg(Color::Cyan)
+            Style::default().fg(Color::White).bg(HOVER_BG)
         } else {
-            Style::default().fg(Color::Gray)
+            Style::default().fg(TEXT_FG).bg(PANEL_BG)
         };
         buf.set_stringn(
             area.x,
@@ -119,6 +139,6 @@ fn render_compact_marker(area: Rect, buf: &mut Buffer) {
         area.y,
         "⠉⢙⣛⣛⣛⣛⣛⣛⣛⣛",
         area.width as usize,
-        Style::default().fg(Color::DarkGray),
+        Style::default().fg(COMPACT_LINE_FG).bg(PANEL_BG),
     );
 }

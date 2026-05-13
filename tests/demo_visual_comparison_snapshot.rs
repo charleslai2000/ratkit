@@ -78,6 +78,7 @@ fn render_code_demo_chrome() -> String {
     );
     state.display.show_outline = true;
     state.display.show_line_numbers = true;
+    state.display.highlight_current_line = true;
 
     render_terminal(|frame| {
         let chunks = Layout::default()

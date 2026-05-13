@@ -4,7 +4,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style},
-    text::Line,
+    text::{Line, Span},
 };
 
 use crate::widgets::document_viewer::{
@@ -65,16 +65,17 @@ fn render_line(
     let y = area.y + row as u16;
     let is_current = line_index == scroll.current_line_index();
     let is_selected = is_line_selected(selection, line_index);
+    let row_style = line_style(is_current, is_selected, display);
     buf.set_style(
         Rect {
             y,
             height: 1,
             ..area
         },
-        line_style(is_current, is_selected, display),
+        row_style,
     );
     render_gutter(area.x, y, gutter_width, line_index, scroll, display, buf);
-    let line = Line::from(document_line.spans.clone());
+    let line = line_with_background(document_line, row_style);
     buf.set_line(
         area.x + gutter_width as u16,
         y,
@@ -92,4 +93,18 @@ fn line_style(is_current: bool, is_selected: bool, display: &DisplaySettings) ->
     } else {
         Style::default()
     }
+}
+
+/// Applies a row background to text spans while preserving syntax foregrounds.
+fn line_with_background(document_line: &DocumentLine, row_style: Style) -> Line<'static> {
+    if row_style.bg.is_none() {
+        return Line::from(document_line.spans.clone());
+    }
+    Line::from(
+        document_line
+            .spans
+            .iter()
+            .map(|span| Span::styled(span.content.clone(), span.style.patch(row_style)))
+            .collect::<Vec<_>>(),
+    )
 }
