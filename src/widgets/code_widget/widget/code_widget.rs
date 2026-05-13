@@ -127,15 +127,23 @@ impl CodeWidget {
         );
         let display = self.display_for_render(state);
         let content = state.source.content().to_string();
-        state.remember_render_cache(&content, &display, &language);
+        let cache_hash = CodeState::render_cache_hash(&content, &display, &language);
+        if let Some(document) = state.cached_rendered_document(cache_hash).cloned() {
+            state.outline = document.outline.clone();
+            state.scroll.update_total_lines(document.lines.len());
+            return document;
+        }
+
         let lines = highlight_code_lines(&content, &language);
         let outline = extract_symbol_outline(&content, &language)
             .into_iter()
             .map(|item| item.into_document_item())
             .collect::<Vec<_>>();
-        state.outline = outline.clone();
-        state.scroll.update_total_lines(lines.len());
-        RenderedDocument::new(lines, outline)
+        let document = RenderedDocument::new(lines, outline);
+        state.outline = document.outline.clone();
+        state.scroll.update_total_lines(document.lines.len());
+        state.store_rendered_document(cache_hash, document.clone());
+        document
     }
 
     /// Applies render-specific display overrides.

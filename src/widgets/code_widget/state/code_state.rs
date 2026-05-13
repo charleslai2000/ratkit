@@ -5,8 +5,8 @@ use std::hash::{Hash, Hasher};
 use crate::widgets::{
     code_widget::foundation::CodeLanguage,
     document_viewer::{
-        CacheState, DisplaySettings, DocumentOutlineItem, ScrollState, SelectionState, SourceState,
-        VimState,
+        CacheState, DisplaySettings, DocumentOutlineItem, RenderedDocument, ScrollState,
+        SelectionState, SourceState, VimState,
     },
 };
 
@@ -33,6 +33,8 @@ pub struct CodeState {
     pub outline_hovered_entry: Option<usize>,
     /// Optional state-level language override.
     pub language_override: Option<String>,
+    /// Cached highlighted document reused while scrolling unchanged content.
+    pub rendered_document: Option<RenderedDocument>,
 }
 
 impl CodeState {
@@ -67,13 +69,12 @@ impl CodeState {
         self.language_override.as_deref()
     }
 
-    /// Stores a render cache hash for content, display settings, and language.
-    pub fn remember_render_cache(
-        &mut self,
+    /// Calculates the cache key for highlighted code content.
+    pub fn render_cache_hash(
         content: &str,
         display: &DisplaySettings,
         language: &CodeLanguage,
-    ) {
+    ) -> u64 {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         content.hash(&mut hasher);
         language.hash(&mut hasher);
@@ -82,7 +83,33 @@ impl CodeState {
         display.highlight_current_line.hash(&mut hasher);
         display.show_outline.hash(&mut hasher);
         display.tab_width.hash(&mut hasher);
-        self.cache.set_content_hash(hasher.finish());
+        hasher.finish()
+    }
+
+    /// Stores a render cache hash for content, display settings, and language.
+    pub fn remember_render_cache(
+        &mut self,
+        content: &str,
+        display: &DisplaySettings,
+        language: &CodeLanguage,
+    ) {
+        self.cache
+            .set_content_hash(Self::render_cache_hash(content, display, language));
+    }
+
+    /// Returns the cached highlighted document when the cache key still matches.
+    pub fn cached_rendered_document(&self, cache_hash: u64) -> Option<&RenderedDocument> {
+        if self.cache.content_hash == cache_hash {
+            self.rendered_document.as_ref()
+        } else {
+            None
+        }
+    }
+
+    /// Stores the highlighted document for reuse on later scroll-only renders.
+    pub fn store_rendered_document(&mut self, cache_hash: u64, document: RenderedDocument) {
+        self.cache.set_content_hash(cache_hash);
+        self.rendered_document = Some(document);
     }
 }
 
@@ -109,5 +136,15 @@ mod tests {
         display.show_outline = !display.show_outline;
         state.remember_render_cache("one", &display, &CodeLanguage::Rust);
         assert_ne!(first, state.cache.content_hash);
+    }
+
+    #[test]
+    fn cached_document_requires_matching_hash() {
+        let mut state = CodeState::default();
+        let display = DisplaySettings::default();
+        let cache_hash = CodeState::render_cache_hash("one", &display, &CodeLanguage::Rust);
+        state.store_rendered_document(cache_hash, RenderedDocument::default());
+        assert!(state.cached_rendered_document(cache_hash).is_some());
+        assert!(state.cached_rendered_document(cache_hash + 1).is_none());
     }
 }
