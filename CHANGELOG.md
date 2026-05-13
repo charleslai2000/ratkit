@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `code-widget` feature with a read-only `CodeWidget`, shared `document_viewer` foundation, syntax highlighting, line gutters, navigation, selection state, and lightweight symbol outlines.
+
 ## [0.1.11] - 2026-01-16
 
 ### Added

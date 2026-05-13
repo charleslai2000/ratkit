@@ -17,6 +17,7 @@ Core runtime and reusable TUI components for [ratatui](https://ratatui.rs/), the
 | **MarkdownWidget** | Full-featured markdown renderer with TOC, syntax highlighting, 25+ themes | `markdown-preview` |
 | **AIChat** | AI chat interface with multi-line input and file attachments | `ai-chat` |
 | **CodeDiff** | VS Code-style diff viewer with syntax highlighting | `code-diff` |
+| **CodeWidget** | Read-only source viewer with syntax highlighting and outlines | `code-widget` |
 | **FileSystemTree** | File browser with devicons, filtering, and navigation | `file-system-tree` |
 | **ThemePicker** | Modal theme selector with 25+ themes and search | `theme-picker` |
 | **HotkeyFooter** | Keyboard shortcut display footer | `hotkey-footer` |
@@ -95,6 +96,7 @@ ratkit = { version = "0.2.14", default-features = false, features = ["tree-view"
 - `markdown-preview` - Markdown preview widget (pulldown-cmark, syntect)
 - `ai-chat` - AI chat widget (reqwest, serde)
 - `code-diff` - Code diff widget (similar)
+- `code-widget` - Read-only code viewer (syntect)
 - `file-system-tree` - File browser (devicons)
 - `theme-picker` - Theme picker widget
 - `hotkey-footer` - Hotkey footer widget

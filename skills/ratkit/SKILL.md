@@ -50,6 +50,12 @@ This file provides a complete reference for working with the ratkit codebase. Th
 - **Goal**: Port the demo's event-pressure controls and redraw strategy into other TUIs
 - **Validation**: Under rapid mouse movement and wheel input, app remains responsive without event backlog
 
+### Extract document viewer patterns from CodeWidget
+- **Where to edit**: Target widget's render and event handling
+- **Related files**: `src/widgets/document_viewer/widget/document_viewer_widget.rs`, `src/widgets/code_widget/widget/code_widget.rs`
+- **Goal**: Reuse shared viewer foundation (scrolling, gutters, selection, outline) across document types
+- **Validation**: Unit tests for scroll stability, line numbers, selection copy, TOC rendering
+
 ### Run with just
 - **Where to edit**: N/A
 - **Related files**: `justfile`
@@ -114,8 +120,8 @@ The ratkit workspace contains a **single crate** with 21 feature-gated modules o
 
 - **Primitives** (11 modules): Core UI building blocks in `src/primitives/`
   - button, pane, dialog, toast, statusline, scroll, menu_bar, resizable_grid, tree_view, widget_event, termtui
-- **Widgets** (6 modules): Higher-level composite widgets in `src/widgets/`
-  - markdown_preview, code_diff, ai_chat, hotkey_footer, file_system_tree, theme_picker
+- **Widgets** (7 modules): Higher-level composite widgets in `src/widgets/`
+  - markdown_preview, code_diff, code_widget, ai_chat, hotkey_footer, file_system_tree, theme_picker
 - **Services** (4 modules): Background monitoring services in `src/services/`
   - file_watcher, git_watcher, repo_watcher, hotkey_service
 - **Core Runtime** (1 module): Application lifecycle in `src/core/`
@@ -179,6 +185,7 @@ Higher-level composite widgets in `src/widgets/`.
 - `ai-chat` - AI chat interface (requires reqwest, serde)
 - `hotkey-footer` - Keyboard shortcut footer
 - `file-system-tree` - File browser with devicons
+- `code-widget` - Code viewer with syntax highlighting, symbol outline, and document viewer foundation
 - `theme-picker` - Theme selector with 25+ themes
 
 ### External Dependencies
@@ -188,6 +195,7 @@ Higher-level composite widgets in `src/widgets/`.
 | ai-chat | reqwest, serde, serde_json |
 | markdown-preview | pulldown-cmark, syntect, syntect-tui, notify, arboard, dirs |
 | code-diff | similar |
+| code-widget | syntect, syntect-tui |
 | file-system-tree | devicons |
 
 ### FileSystemTree visual parity notes (Yazi-style)
@@ -372,6 +380,21 @@ All watcher services use the `notify` crate for filesystem events.
 - **Key APIs**: `new()`, `with_config()`, `handle_navigation_key()`, `enter_filter_mode()`, `expand_selected()`, `collapse_selected()`
 - **Pitfalls**: Keep icon colors sourced from devicons, and preserve selection-row alignment when adding rounded highlight glyphs
 - **Source**: `src/widgets/file_system_tree/widget.rs`, `src/widgets/file_system_tree/config.rs`, `src/widgets/file_system_tree/state.rs`
+
+### CodeWidget
+- **Use when**: Viewing source code files with syntax highlighting, symbol outline, and line-number gutters
+- **Enable/Install**: `features = ["code-widget"]` (enables syntect, syntect-tui, pane, statusline)
+- **Import/Invoke**: `use ratkit::widgets::code_widget::{CodeState, CodeWidget};`
+- **Minimal flow**:
+  1. Create `CodeState::default()`
+  2. Configure with `.source.set_source_file(path)?` or `.source.set_source(content)`
+  3. Build widget with `CodeWidget::from_state(&state).show_line_numbers(true).show_outline(true).language("rust")`
+  4. Render with `frame.render_stateful_widget(widget, area, &mut state)`
+- **Key APIs**: `.show_line_numbers()`, `.show_outline()`, `.language()`, `.source` field for content
+- **Document Viewer Foundation**: Shared code lives in `src/widgets/document_viewer/` with state, widget, extensions, and foundation modules
+- **Pitfalls**: Language auto-detection uses file extension and shebang; explicit `.language("rust")` overrides detection
+- **Source**: `src/widgets/code_widget/widget/code_widget.rs`, `src/widgets/document_viewer/widget/document_viewer_widget.rs`
+
 
 ### FileWatcher
 - **Use when**: Detecting file/directory changes
