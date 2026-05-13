@@ -3,6 +3,7 @@ name = "ratkit"
 version = "0.2.14"
 edition = "2021"
 rust-version = "1.70"
+autoexamples = false
 authors = ["Alpha Innovation Labs"]
 description = "A comprehensive collection of reusable TUI components for ratatui including resizable splits, tree views, markdown rendering, toast notifications, dialogs, and terminal embedding"
 documentation = "https://docs.rs/ratkit"
@@ -52,6 +53,7 @@ all = [
     "widget-event",
     "termtui",
     "markdown-preview",
+    "code-widget",
     "code-diff",
     "ai-chat",
     "hotkey-footer",
@@ -79,6 +81,7 @@ widgets = [
     "tree-view",
     "widget-event",
     "markdown-preview",
+    "code-widget",
     "code-diff",
     "ai-chat",
     "hotkey-footer",
@@ -104,6 +107,7 @@ resizable-grid = []
 tree-view = ["widget-event"]
 widget-event = []
 markdown-preview = ["pulldown-cmark", "syntect", "syntect-tui", "notify", "arboard", "dirs", "serde", "serde_json", "pane", "statusline", "file-watcher", "git-watcher"]
+code-widget = ["syntect", "syntect-tui", "pane", "statusline"]
 code-diff = ["similar"]
 ai-chat = ["reqwest", "serde", "serde_json"]
 hotkey-footer = []
@@ -124,37 +128,102 @@ reqwest = { version = "0.12", features = ["json"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 insta = "1"
-
-[[example]]
-name = "ratkit_demo"
-required-features = ["button", "pane"]
-
-[[example]]
-name = "mouse_only"
+tempfile = "3"
 
 [[example]]
 name = "ai_chat_ai_chat_demo"
 required-features = ["ai-chat"]
 
 [[example]]
+name = "button_button_demo"
+required-features = ["button"]
+
+[[example]]
 name = "code_diff_code_diff_demo"
 required-features = ["code-diff"]
+
+[[example]]
+name = "code_widget_code_widget_demo"
+required-features = ["code-widget"]
+
+[[example]]
+name = "dialog_dialog_demo"
+required-features = ["dialog"]
 
 [[example]]
 name = "file_system_tree_file_system_tree_demo"
 required-features = ["file-system-tree"]
 
 [[example]]
+name = "file_watcher_demo"
+required-features = ["file-watcher"]
+
+[[example]]
+name = "git_watcher_demo"
+required-features = ["git-watcher"]
+
+[[example]]
 name = "hotkey_footer_hotkey_footer_demo"
 required-features = ["hotkey-footer"]
+
+[[example]]
+name = "hotkey_service_demo"
+required-features = ["hotkey-service"]
 
 [[example]]
 name = "markdown_preview_markdown_preview_demo"
 required-features = ["markdown-preview"]
 
 [[example]]
+name = "menu-bar_menu_bar_demo"
+required-features = ["menu-bar"]
+
+[[example]]
+name = "mouse_only"
+
+[[example]]
+name = "pane_pane_demo"
+required-features = ["pane"]
+
+[[example]]
+name = "ratkit_demo"
+required-features = ["button", "pane"]
+
+[[example]]
+name = "repo_watcher_demo"
+required-features = ["repo-watcher"]
+
+[[example]]
+name = "resizable-grid_resizable_grid_demo"
+required-features = ["resizable-grid"]
+
+[[example]]
+name = "scroll_scroll_demo"
+required-features = ["scroll"]
+
+[[example]]
+name = "statusline_statusline_demo"
+required-features = ["statusline"]
+
+[[example]]
+name = "termtui_term_mprocs_demo"
+required-features = ["termtui"]
+
+[[example]]
 name = "theme_picker_theme_picker_demo"
 required-features = ["theme-picker"]
+
+[[example]]
+name = "toast_toast_demo"
+required-features = ["toast"]
+
+[[example]]
+name = "tree-view_tree_view_demo"
+required-features = ["tree-view"]
+
+[[example]]
+name = "widget-event_widget_event_demo"
+required-features = ["widget-event"]
 
 # [[example]]
 # name = "test_opencode"

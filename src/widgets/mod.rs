@@ -39,6 +39,9 @@ pub use crate::widgets::ai_chat::*;
 #[cfg(feature = "code-diff")]
 pub use crate::widgets::code_diff::*;
 
+#[cfg(feature = "code-widget")]
+pub use crate::widgets::code_widget::*;
+
 #[cfg(feature = "file-system-tree")]
 pub use crate::widgets::file_system_tree::*;
 
@@ -57,6 +60,12 @@ pub mod ai_chat;
 
 #[cfg(feature = "code-diff")]
 pub mod code_diff;
+
+#[cfg(feature = "code-widget")]
+pub mod code_widget;
+
+#[cfg(any(feature = "code-widget", feature = "markdown-preview"))]
+pub mod document_viewer;
 
 #[cfg(feature = "file-system-tree")]
 pub mod file_system_tree;

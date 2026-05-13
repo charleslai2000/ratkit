@@ -46,6 +46,7 @@ help:
     @echo "  just \033[0;33mdemo\033[0m                      \033[0;32mPick and run an example\033[0m"
     @echo "  just \033[0;33mdemo-md\033[0m                   \033[0;32mMarkdown viewer demo\033[0m"
     @echo "  just \033[0;33mdemo-md-small\033[0m             \033[0;32mMarkdown demo (small file)\033[0m"
+    @echo "  just \033[0;33mdemo-code\033[0m                 \033[0;32mCode widget demo\033[0m"
     @echo "  just \033[0;33mdemo-term\033[0m                 \033[0;32mTerminal pane demo\033[0m"
     @echo "  just \033[0;33mdemo-split\033[0m                \033[0;32mSplit layout demo\033[0m"
     @echo "  just \033[0;33mdemo-codediff\033[0m             \033[0;32mCode diff demo\033[0m"
@@ -92,6 +93,7 @@ import 'justfiles/utilities/cast-replay.just'
 import 'justfiles/utilities/cast-upload.just'
 import 'justfiles/utilities/cast-gif.just'
 import 'justfiles/utilities/demo-md.just'
+import 'justfiles/utilities/demo-code.just'
 import 'justfiles/utilities/demo-term.just'
 import 'justfiles/utilities/demo-codediff.just'
 import 'justfiles/utilities/demo-aichat.just'

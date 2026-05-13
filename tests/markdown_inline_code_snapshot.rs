@@ -1,3 +1,5 @@
+#![cfg(feature = "markdown-preview")]
+
 use insta::assert_snapshot;
 use ratatui::backend::TestBackend;
 use ratatui::Terminal;
