@@ -49,13 +49,15 @@ impl ScrollState {
         self.current_line = line.clamp(1, self.total_lines.max(1));
         self.adjust_scroll_for_current_line();
     }
-    /// Scrolls the viewport down by a number of lines.
+    /// Scrolls the viewport down by a number of lines while keeping focus visible.
     pub fn scroll_down(&mut self, amount: usize) {
         self.set_offset(self.effective_offset().saturating_add(amount));
+        self.clamp_current_line_to_viewport();
     }
-    /// Scrolls the viewport up by a number of lines.
+    /// Scrolls the viewport up by a number of lines while keeping focus visible.
     pub fn scroll_up(&mut self, amount: usize) {
         self.set_offset(self.effective_offset().saturating_sub(amount));
+        self.clamp_current_line_to_viewport();
     }
     /// Moves the focused line down by a number of lines.
     pub fn move_current_down(&mut self, amount: usize) {
@@ -170,6 +172,31 @@ impl ScrollState {
         }
         self.set_offset(offset);
     }
+    /// Clamps the focused line into the stable viewport band without moving the viewport.
+    fn clamp_current_line_to_viewport(&mut self) {
+        const SCROLL_MARGIN: usize = 3;
+        let offset = self.effective_offset();
+        let viewport_height = self.viewport_height.max(1);
+        let (lower, upper) = if viewport_height <= SCROLL_MARGIN * 2 {
+            (
+                offset,
+                offset
+                    .saturating_add(viewport_height.saturating_sub(1))
+                    .min(self.total_lines.saturating_sub(1)),
+            )
+        } else {
+            (
+                offset.saturating_add(SCROLL_MARGIN),
+                offset
+                    .saturating_add(viewport_height.saturating_sub(1))
+                    .saturating_sub(SCROLL_MARGIN)
+                    .min(self.total_lines.saturating_sub(1)),
+            )
+        };
+        let current = self.current_line_index().clamp(lower, upper);
+        self.current_line = current.saturating_add(1);
+    }
+
     /// Clamps both offset aliases to the valid range.
     fn clamp_offsets(&mut self) {
         let offset = self.effective_offset();
