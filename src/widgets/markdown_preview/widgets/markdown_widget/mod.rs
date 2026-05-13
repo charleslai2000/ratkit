@@ -144,6 +144,7 @@ pub use foundation::functions::{render_markdown, render_markdown_with_style};
 
 pub use markdown_document_adapter::{
     markdown_lines_to_document, markdown_lines_to_document_with_source_lines,
+    markdown_viewport_lines_to_document_with_source_lines,
 };
 pub use markdown_outline_adapter::markdown_outline_from_content;
 pub use markdown_viewer_state_adapter::{

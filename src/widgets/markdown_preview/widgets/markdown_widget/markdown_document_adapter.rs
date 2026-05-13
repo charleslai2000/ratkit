@@ -24,7 +24,27 @@ pub fn markdown_lines_to_document_with_source_lines(
     source_lines: Vec<usize>,
     content: &str,
 ) -> RenderedDocument {
-    let document_lines = lines
+    let document_lines = markdown_lines_to_document_lines(lines, source_lines);
+    RenderedDocument::new(document_lines, markdown_outline_from_content(content))
+}
+
+/// Converts viewport markdown lines without rebuilding a full-document outline.
+pub fn markdown_viewport_lines_to_document_with_source_lines(
+    lines: Vec<Line<'static>>,
+    source_lines: Vec<usize>,
+) -> RenderedDocument {
+    RenderedDocument::new(
+        markdown_lines_to_document_lines(lines, source_lines),
+        Vec::new(),
+    )
+}
+
+/// Converts markdown lines into normalized document lines with source mapping.
+fn markdown_lines_to_document_lines(
+    lines: Vec<Line<'static>>,
+    source_lines: Vec<usize>,
+) -> Vec<DocumentLine> {
+    lines
         .into_iter()
         .enumerate()
         .map(|(index, line)| {
@@ -35,8 +55,7 @@ pub fn markdown_lines_to_document_with_source_lines(
             let kind = markdown_line_kind(&line);
             DocumentLine::new(source_line, line.spans, kind)
         })
-        .collect();
-    RenderedDocument::new(document_lines, markdown_outline_from_content(content))
+        .collect()
 }
 
 /// Classifies a rendered markdown line for the shared model.
@@ -88,5 +107,15 @@ mod tests {
         );
         assert_eq!(document.lines[0].source_line, 7);
         assert_eq!(document.lines[1].source_line, 7);
+    }
+
+    #[test]
+    fn viewport_conversion_skips_outline() {
+        let document = markdown_viewport_lines_to_document_with_source_lines(
+            vec![Line::from(vec![Span::raw("# visible")])],
+            vec![5],
+        );
+        assert_eq!(document.lines[0].source_line, 5);
+        assert!(document.outline.is_empty());
     }
 }

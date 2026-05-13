@@ -1,5 +1,5 @@
 use crate::primitives::pane::Pane;
-use crate::widgets::document_viewer::DocumentViewerWidget;
+use crate::widgets::document_viewer::{DocumentViewerWidget, ScrollState as ViewerScrollState};
 use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::scrollbar::CustomScrollbar;
 use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::selection::should_render_line;
 use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::toc::Toc;
@@ -7,13 +7,9 @@ use crate::widgets::markdown_preview::widgets::markdown_widget::foundation::elem
     render_with_options, RenderOptions,
 };
 use crate::widgets::markdown_preview::widgets::markdown_widget::foundation::helpers::hash_content;
-use crate::widgets::markdown_preview::widgets::markdown_widget::markdown_document_adapter::markdown_lines_to_document_with_source_lines;
-use crate::widgets::markdown_preview::widgets::markdown_widget::markdown_viewer_state_adapter::{
-    markdown_display_to_viewer_display, markdown_scroll_to_viewer_scroll,
-};
-use crate::widgets::markdown_preview::widgets::markdown_widget::state::{
-    ParsedCache, RenderCache, TocState,
-};
+use crate::widgets::markdown_preview::widgets::markdown_widget::markdown_document_adapter::markdown_viewport_lines_to_document_with_source_lines;
+use crate::widgets::markdown_preview::widgets::markdown_widget::markdown_viewer_state_adapter::markdown_display_to_viewer_display;
+use crate::widgets::markdown_preview::widgets::markdown_widget::state::{ParsedCache, RenderCache};
 use crate::widgets::markdown_preview::widgets::markdown_widget::widget::features::filter::element_to_plain_text_for_filter;
 use crate::widgets::markdown_preview::widgets::markdown_widget::widget::features::selection::apply_selection_highlighting;
 use crate::widgets::markdown_preview::widgets::markdown_widget::widget::{
@@ -152,18 +148,7 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 })
                 .unwrap_or(false);
 
-        let (all_lines, line_boundaries, line_source_lines): (
-            Vec<Line<'static>>,
-            Vec<(usize, usize)>,
-            Vec<usize>,
-        ) = if render_cache_valid {
-            let cache = self.cache.render.as_ref().expect("render cache present");
-            (
-                cache.lines.clone(),
-                cache.line_boundaries.clone(),
-                cache.line_source_lines.clone(),
-            )
-        } else {
+        if !render_cache_valid {
             let parsed_cache_valid = self
                 .cache
                 .parsed
@@ -230,23 +215,23 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 theme,
                 app_theme_hash,
                 show_heading_collapse,
-                lines: lines.clone(),
-                line_boundaries: boundaries.clone(),
-                line_source_lines: source_lines.clone(),
+                lines,
+                line_boundaries: boundaries,
+                line_source_lines: source_lines,
             });
+        }
 
-            (lines, boundaries, source_lines)
-        };
-
-        self.scroll.update_total_lines(all_lines.len());
-        self.rendered_lines = all_lines.clone();
+        let render_cache = self.cache.render.as_ref().expect("render cache present");
+        self.scroll.update_total_lines(render_cache.lines.len());
+        if !render_cache_valid || self.rendered_lines.len() != render_cache.lines.len() {
+            self.rendered_lines = render_cache.lines.clone();
+        }
 
         let current_visual_line = self.scroll.current_line.saturating_sub(1);
-        let decorated_lines = if self.selection_active {
-            apply_selection_highlighting(all_lines.clone(), &self.selection, 0)
-        } else {
-            all_lines.clone()
-        };
+        let visible_range = self.scroll.visible_range(content_area.height as usize);
+        let decorated_lines = self
+            .selection_active
+            .then(|| apply_selection_highlighting(render_cache.lines.clone(), &self.selection, 0));
 
         let final_lines: Vec<Line<'static>> = if self.display.show_document_line_numbers() {
             let theme_colors = self.display.code_block_theme.colors();
@@ -256,114 +241,73 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
             let border_style = Style::default()
                 .fg(theme_colors.border)
                 .bg(theme_colors.background);
-
-            let mut visual_to_logical: Vec<(usize, bool)> = Vec::with_capacity(all_lines.len());
-            for (logical_idx, (_start_idx, count)) in line_boundaries.iter().enumerate() {
-                for offset in 0..*count {
-                    visual_to_logical.push((logical_idx + 1, offset == 0));
-                }
-            }
-
-            decorated_lines
-                .into_iter()
-                .enumerate()
-                .map(|(visual_idx, mut line)| {
-                    let is_current = visual_idx == current_visual_line;
-                    let (logical_num, is_first) = visual_to_logical
-                        .get(visual_idx)
-                        .copied()
-                        .unwrap_or((visual_idx + 1, true));
-
-                    let (num_str, border_str) = if is_first {
-                        (format!("{:>3} ", logical_num), "│ ".to_string())
-                    } else {
-                        ("    ".to_string(), "│ ".to_string())
-                    };
-
-                    let num_span = Span::styled(num_str, line_num_style);
-                    let border_span = Span::styled(border_str, border_style);
-                    let mut new_spans = vec![num_span, border_span];
-
-                    let highlight_bg = if self.selection_active {
-                        CURRENT_LINE_DRAG_BG
-                    } else {
-                        CURRENT_LINE_BG
-                    };
-
-                    if is_current {
-                        let mut content_width = 0usize;
-                        for span in line.spans.drain(..) {
-                            content_width += span.content.chars().count();
-                            if span.content.contains('▋') {
-                                new_spans.push(span);
-                            } else {
-                                new_spans
-                                    .push(Span::styled(span.content, span.style.bg(highlight_bg)));
-                            }
-                        }
-                        let total_content_width = line_num_width + content_width;
-                        if total_content_width < content_area.width as usize {
-                            let padding =
-                                " ".repeat(content_area.width as usize - total_content_width);
-                            new_spans
-                                .push(Span::styled(padding, Style::default().bg(highlight_bg)));
-                        }
-                    } else {
-                        new_spans.append(&mut line.spans);
-                    }
-
-                    Line::from(new_spans)
+            visible_range
+                .clone()
+                .filter_map(|visual_idx| {
+                    let line = decorated_lines
+                        .as_ref()
+                        .and_then(|lines| lines.get(visual_idx))
+                        .or_else(|| render_cache.lines.get(visual_idx))?
+                        .clone();
+                    let (logical_num, is_first) =
+                        visual_to_logical_line(&render_cache.line_boundaries, visual_idx)
+                            .unwrap_or((visual_idx + 1, true));
+                    Some(decorate_markdown_line(
+                        line,
+                        visual_idx,
+                        current_visual_line,
+                        Some((logical_num, is_first, line_num_style, border_style)),
+                        self.selection_active,
+                        content_area.width as usize,
+                        line_num_width,
+                    ))
                 })
                 .collect()
         } else {
-            let highlight_bg = if self.selection_active {
-                CURRENT_LINE_DRAG_BG
-            } else {
-                CURRENT_LINE_BG
-            };
-
-            decorated_lines
-                .into_iter()
-                .enumerate()
-                .map(|(visual_idx, mut line)| {
-                    let is_current = visual_idx == current_visual_line;
-
-                    if is_current {
-                        let mut new_spans = Vec::new();
-                        let mut content_width = 0usize;
-                        for span in line.spans.drain(..) {
-                            content_width += span.content.chars().count();
-                            if span.content.contains('▋') {
-                                new_spans.push(span);
-                            } else {
-                                new_spans
-                                    .push(Span::styled(span.content, span.style.bg(highlight_bg)));
-                            }
-                        }
-
-                        if content_width < content_area.width as usize {
-                            let padding = " ".repeat(content_area.width as usize - content_width);
-                            new_spans
-                                .push(Span::styled(padding, Style::default().bg(highlight_bg)));
-                        }
-                        Line::from(new_spans)
-                    } else {
-                        line
-                    }
+            visible_range
+                .clone()
+                .filter_map(|visual_idx| {
+                    let line = decorated_lines
+                        .as_ref()
+                        .and_then(|lines| lines.get(visual_idx))
+                        .or_else(|| render_cache.lines.get(visual_idx))?
+                        .clone();
+                    Some(decorate_markdown_line(
+                        line,
+                        visual_idx,
+                        current_visual_line,
+                        None,
+                        self.selection_active,
+                        content_area.width as usize,
+                        line_num_width,
+                    ))
                 })
                 .collect()
         };
 
-        let markdown_document = markdown_lines_to_document_with_source_lines(
+        let visible_source_lines = visible_range
+            .clone()
+            .map(|visual_idx| {
+                render_cache
+                    .line_source_lines
+                    .get(visual_idx)
+                    .copied()
+                    .unwrap_or_else(|| visual_idx.saturating_add(1))
+            })
+            .collect::<Vec<_>>();
+        let markdown_document = markdown_viewport_lines_to_document_with_source_lines(
             final_lines,
-            line_source_lines,
-            &self.content,
+            visible_source_lines,
         );
-        let viewer_scroll = markdown_scroll_to_viewer_scroll(
-            &self.scroll,
-            current_visual_line,
-            markdown_document.line_count(),
+        let mut viewer_scroll = ViewerScrollState::default();
+        viewer_scroll.viewport_height = content_area.height as usize;
+        viewer_scroll.update_total_lines(markdown_document.line_count().max(1));
+        viewer_scroll.set_current_line(
+            current_visual_line
+                .saturating_sub(visible_range.start)
+                .saturating_add(1),
         );
+        viewer_scroll.set_offset(0);
         let mut viewer_display = markdown_display_to_viewer_display(&self.display);
         viewer_display.show_line_numbers = false;
         viewer_display.highlight_current_line = false;
@@ -371,12 +315,8 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
         viewer.render(content_area, buf, &viewer_scroll);
 
         if let Some(ov_area) = overlay_area {
-            let mut auto_state = TocState::from_content(&self.content);
-            auto_state.hovered = self.toc_hovered;
-            auto_state.hovered_entry = self.toc_hovered_entry;
-            auto_state.scroll_offset = self.toc_scroll_offset;
-
-            let final_state = self.resolved_toc_state(&auto_state);
+            self.sync_toc_interaction_state();
+            let final_state = self.toc_state.as_ref().expect("toc state present");
             let toc = Toc::new(final_state)
                 .expanded(self.toc_hovered)
                 .config(self.toc_config.clone());
@@ -406,6 +346,71 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
 
         self.inner_area = Some(content_area);
     }
+}
+
+/// Maps a rendered visual line index to its logical markdown line number.
+fn visual_to_logical_line(
+    line_boundaries: &[(usize, usize)],
+    visual_idx: usize,
+) -> Option<(usize, bool)> {
+    let candidate = line_boundaries
+        .partition_point(|(start_idx, _count)| *start_idx <= visual_idx)
+        .checked_sub(1)?;
+    let (start_idx, count) = line_boundaries.get(candidate).copied()?;
+    (visual_idx < start_idx.saturating_add(count))
+        .then_some((candidate.saturating_add(1), visual_idx == start_idx))
+}
+
+/// Adds optional document line numbers and current-line highlighting to one visible line.
+#[allow(clippy::type_complexity)]
+fn decorate_markdown_line(
+    mut line: Line<'static>,
+    visual_idx: usize,
+    current_visual_line: usize,
+    line_number: Option<(usize, bool, Style, Style)>,
+    selection_active: bool,
+    content_width: usize,
+    line_num_width: usize,
+) -> Line<'static> {
+    let highlight_bg = if selection_active {
+        CURRENT_LINE_DRAG_BG
+    } else {
+        CURRENT_LINE_BG
+    };
+    let is_current = visual_idx == current_visual_line;
+    let mut new_spans = Vec::new();
+    if let Some((logical_num, is_first, line_num_style, border_style)) = line_number {
+        let num_str = if is_first {
+            format!("{:>3} ", logical_num)
+        } else {
+            "    ".to_string()
+        };
+        new_spans.push(Span::styled(num_str, line_num_style));
+        new_spans.push(Span::styled("│ ".to_string(), border_style));
+    }
+
+    if !is_current {
+        new_spans.append(&mut line.spans);
+        return Line::from(new_spans);
+    }
+
+    let mut rendered_width = 0usize;
+    for span in line.spans.drain(..) {
+        rendered_width += span.content.chars().count();
+        if span.content.contains('▋') {
+            new_spans.push(span);
+        } else {
+            new_spans.push(Span::styled(span.content, span.style.bg(highlight_bg)));
+        }
+    }
+    let total_width = line_num_width.saturating_add(rendered_width);
+    if total_width < content_width {
+        new_spans.push(Span::styled(
+            " ".repeat(content_width - total_width),
+            Style::default().bg(highlight_bg),
+        ));
+    }
+    Line::from(new_spans)
 }
 
 impl<'a> Widget for MarkdownWidget<'a> {

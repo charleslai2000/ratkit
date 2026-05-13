@@ -7,7 +7,27 @@ use ratatui::layout::Rect;
 impl<'a> MarkdownWidget<'a> {
     pub fn show_toc(mut self, show: bool) -> Self {
         self.show_toc = show;
+        if show {
+            self.ensure_auto_toc_state();
+        }
         self
+    }
+
+    /// Ensures the widget has a reusable TOC state for unchanged content.
+    pub(crate) fn ensure_auto_toc_state(&mut self) {
+        if self.toc_state.is_none() {
+            self.toc_state = Some(TocState::from_content(&self.content));
+        }
+    }
+
+    /// Copies transient hover and scroll values into the reusable TOC state.
+    pub(crate) fn sync_toc_interaction_state(&mut self) {
+        self.ensure_auto_toc_state();
+        if let Some(toc_state) = &mut self.toc_state {
+            toc_state.scroll_offset = self.toc_scroll_offset;
+            toc_state.hovered = self.toc_hovered;
+            toc_state.hovered_entry = self.toc_hovered_entry;
+        }
     }
 
     pub fn toggle_toc(&mut self) -> bool {
@@ -124,11 +144,8 @@ impl<'a> MarkdownWidget<'a> {
             return false;
         }
 
-        let mut auto_state = TocState::from_content(&self.content);
-        auto_state.scroll_offset = self.toc_scroll_offset;
-        auto_state.hovered = self.toc_hovered;
-        auto_state.hovered_entry = self.toc_hovered_entry;
-        let toc_state = self.resolved_toc_state(&auto_state);
+        self.sync_toc_interaction_state();
+        let toc_state = self.toc_state.as_ref().expect("toc state present");
         let toc = Toc::new(toc_state)
             .expanded(self.toc_hovered)
             .config(self.toc_config.clone());
@@ -177,11 +194,11 @@ impl<'a> MarkdownWidget<'a> {
 
         if is_potentially_over_toc {
             let hovered_entry = {
-                let mut auto_state = TocState::from_content(&self.content);
-                auto_state.scroll_offset = self.toc_scroll_offset;
-                auto_state.hovered = true;
-                auto_state.hovered_entry = self.toc_hovered_entry;
-                let toc_state = self.resolved_toc_state(&auto_state);
+                self.sync_toc_interaction_state();
+                if let Some(toc_state) = &mut self.toc_state {
+                    toc_state.hovered = true;
+                }
+                let toc_state = self.toc_state.as_ref().expect("toc state present");
                 let toc = Toc::new(toc_state)
                     .expanded(true)
                     .config(self.toc_config.clone());
@@ -221,11 +238,11 @@ impl<'a> MarkdownWidget<'a> {
     }
 
     pub fn update_toc_hovered_entry(&mut self, x: u16, y: u16, toc_area: Rect) {
-        let mut auto_state = TocState::from_content(&self.content);
-        auto_state.scroll_offset = self.toc_scroll_offset;
-        auto_state.hovered = true;
-        auto_state.hovered_entry = self.toc_hovered_entry;
-        let toc_state = self.resolved_toc_state(&auto_state);
+        self.sync_toc_interaction_state();
+        if let Some(toc_state) = &mut self.toc_state {
+            toc_state.hovered = true;
+        }
+        let toc_state = self.toc_state.as_ref().expect("toc state present");
         let toc = Toc::new(toc_state)
             .expanded(true)
             .config(self.toc_config.clone());
@@ -235,11 +252,11 @@ impl<'a> MarkdownWidget<'a> {
 
     pub(crate) fn handle_toc_hover_internal(&mut self, event: &MouseEvent, toc_area: Rect) {
         let hovered_entry = {
-            let mut auto_state = TocState::from_content(&self.content);
-            auto_state.scroll_offset = self.toc_scroll_offset;
-            auto_state.hovered = true;
-            auto_state.hovered_entry = self.toc_hovered_entry;
-            let toc_state = self.resolved_toc_state(&auto_state);
+            self.sync_toc_interaction_state();
+            if let Some(toc_state) = &mut self.toc_state {
+                toc_state.hovered = true;
+            }
+            let toc_state = self.toc_state.as_ref().expect("toc state present");
             let toc = Toc::new(toc_state)
                 .expanded(true)
                 .config(self.toc_config.clone());
