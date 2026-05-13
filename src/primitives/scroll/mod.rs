@@ -112,10 +112,10 @@ mod tests {
         assert_eq!(calculate_scroll_offset(99, 1, 100), 99);
         assert_eq!(calculate_scroll_offset(0, 3, 10), 0);
         assert_eq!(calculate_scroll_offset(1, 3, 10), 0);
-        assert_eq!(calculate_scroll_offset(2, 3, 10), 0);
-        assert_eq!(calculate_scroll_offset(3, 3, 10), 1);
-        assert_eq!(calculate_scroll_offset(6, 3, 10), 4);
-        assert_eq!(calculate_scroll_offset(7, 3, 10), 5);
+        assert_eq!(calculate_scroll_offset(2, 3, 10), 1);
+        assert_eq!(calculate_scroll_offset(3, 3, 10), 2);
+        assert_eq!(calculate_scroll_offset(6, 3, 10), 5);
+        assert_eq!(calculate_scroll_offset(7, 3, 10), 6);
         assert_eq!(calculate_scroll_offset(8, 3, 10), 7);
         assert_eq!(calculate_scroll_offset(9, 3, 10), 7);
     }

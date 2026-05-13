@@ -80,6 +80,9 @@
 // Core modules
 pub mod extensions;
 pub mod foundation;
+pub mod markdown_document_adapter;
+pub mod markdown_outline_adapter;
+pub mod markdown_viewer_state_adapter;
 pub mod state;
 pub mod widget;
 
@@ -139,6 +142,14 @@ pub use foundation::functions::{render_markdown, render_markdown_with_style};
 // Widget
 // ============================================================================
 
+pub use markdown_document_adapter::{
+    markdown_lines_to_document, markdown_lines_to_document_with_source_lines,
+};
+pub use markdown_outline_adapter::markdown_outline_from_content;
+pub use markdown_viewer_state_adapter::{
+    markdown_display_to_viewer_display, markdown_scroll_to_viewer_scroll,
+    markdown_source_to_viewer_source,
+};
 pub use widget::MarkdownWidget;
 pub use widget::MarkdownWidgetMode;
 

@@ -14,7 +14,10 @@ pub use widgets::markdown_widget::extensions::{
     SyntaxHighlighter, SyntaxThemeVariant, ThemeVariant, Toc, TocConfig,
 };
 pub use widgets::markdown_widget::{
-    render_element, render_element_with_options, render_markdown, render_markdown_to_elements,
+    markdown_display_to_viewer_display, markdown_lines_to_document,
+    markdown_lines_to_document_with_source_lines, markdown_outline_from_content,
+    markdown_scroll_to_viewer_scroll, markdown_source_to_viewer_source, render_element,
+    render_element_with_options, render_markdown, render_markdown_to_elements,
     render_markdown_with_style, CacheState, CheckboxState, CodeBlockBorderKind, CodeBlockColors,
     CodeBlockTheme, CollapseState, ColumnAlignment, DisplaySettings, DoubleClickState, ElementKind,
     ExpandableEntry, ExpandableState, GitStats, GitStatsState, MarkdownDoubleClickEvent,

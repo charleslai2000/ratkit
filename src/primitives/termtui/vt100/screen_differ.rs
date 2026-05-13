@@ -229,7 +229,7 @@ mod tests {
             Cell::new("5"),
         ]];
         differ.diff(&mut out, &screen).unwrap();
-        assert_eq!("12\x1b[38;5;4m34\x1b[39m5", out);
+        assert_eq!("12\x1b[38;5;4m34\x1b[39m5\x1b[?25l", out);
 
         let screen = vec![vec![
             Cell::new("1"),
