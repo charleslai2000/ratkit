@@ -190,6 +190,7 @@ mod tests {
     fn test_click_at_top() {
         let area = Rect::new(0, 0, 1, 20);
         let scroll = ScrollState {
+            offset: 0,
             scroll_offset: 0,
             viewport_height: 10,
             total_lines: 100,
@@ -205,6 +206,7 @@ mod tests {
     fn test_click_at_bottom() {
         let area = Rect::new(0, 0, 1, 20);
         let scroll = ScrollState {
+            offset: 0,
             scroll_offset: 0,
             viewport_height: 10,
             total_lines: 100,
@@ -221,6 +223,7 @@ mod tests {
     fn test_click_at_middle() {
         let area = Rect::new(0, 0, 1, 20);
         let scroll = ScrollState {
+            offset: 0,
             scroll_offset: 0,
             viewport_height: 10,
             total_lines: 100,
@@ -387,6 +390,7 @@ mod thumb_bounds_tests {
     #[test]
     fn test_content_fits_viewport() {
         let scroll = ScrollState {
+            offset: 0,
             scroll_offset: 0,
             viewport_height: 20,
             total_lines: 10,
@@ -402,6 +406,7 @@ mod thumb_bounds_tests {
     #[test]
     fn test_at_top() {
         let scroll = ScrollState {
+            offset: 0,
             scroll_offset: 0,
             viewport_height: 10,
             total_lines: 100,
@@ -416,6 +421,7 @@ mod thumb_bounds_tests {
     #[test]
     fn test_at_bottom() {
         let scroll = ScrollState {
+            offset: 0,
             scroll_offset: 90, // max_scroll = 100 - 10 = 90
             viewport_height: 10,
             total_lines: 100,
@@ -431,6 +437,7 @@ mod thumb_bounds_tests {
     #[test]
     fn test_min_thumb_height() {
         let scroll = ScrollState {
+            offset: 0,
             scroll_offset: 0,
             viewport_height: 1,
             total_lines: 1000,

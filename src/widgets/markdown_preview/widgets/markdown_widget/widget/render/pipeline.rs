@@ -1,4 +1,5 @@
 use crate::primitives::pane::Pane;
+use crate::widgets::document_viewer::DocumentViewerWidget;
 use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::scrollbar::CustomScrollbar;
 use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::selection::should_render_line;
 use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::toc::Toc;
@@ -6,6 +7,10 @@ use crate::widgets::markdown_preview::widgets::markdown_widget::foundation::elem
     render_with_options, RenderOptions,
 };
 use crate::widgets::markdown_preview::widgets::markdown_widget::foundation::helpers::hash_content;
+use crate::widgets::markdown_preview::widgets::markdown_widget::markdown_document_adapter::markdown_lines_to_document_with_source_lines;
+use crate::widgets::markdown_preview::widgets::markdown_widget::markdown_viewer_state_adapter::{
+    markdown_display_to_viewer_display, markdown_scroll_to_viewer_scroll,
+};
 use crate::widgets::markdown_preview::widgets::markdown_widget::state::{
     ParsedCache, RenderCache, TocState,
 };
@@ -18,7 +23,6 @@ use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Widget};
-use unicode_width::UnicodeWidthChar;
 
 impl<'a> Widget for &mut MarkdownWidget<'a> {
     fn render(self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
@@ -105,7 +109,7 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
 
         self.scroll.update_viewport(content_area);
 
-        let line_num_width = if self.display.show_document_line_numbers {
+        let line_num_width = if self.display.show_document_line_numbers() {
             6
         } else {
             0
@@ -148,97 +152,103 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 })
                 .unwrap_or(false);
 
-        let (all_lines, line_boundaries): (Vec<Line<'static>>, Vec<(usize, usize)>) =
-            if render_cache_valid {
-                let cache = self.cache.render.as_ref().expect("render cache present");
-                (cache.lines.clone(), cache.line_boundaries.clone())
-            } else {
-                let parsed_cache_valid = self
-                    .cache
+        let (all_lines, line_boundaries, line_source_lines): (
+            Vec<Line<'static>>,
+            Vec<(usize, usize)>,
+            Vec<usize>,
+        ) = if render_cache_valid {
+            let cache = self.cache.render.as_ref().expect("render cache present");
+            (
+                cache.lines.clone(),
+                cache.line_boundaries.clone(),
+                cache.line_source_lines.clone(),
+            )
+        } else {
+            let parsed_cache_valid = self
+                .cache
+                .parsed
+                .as_ref()
+                .map(|c| c.content_hash == content_hash)
+                .unwrap_or(false);
+
+            let elements = if parsed_cache_valid {
+                self.cache
                     .parsed
                     .as_ref()
-                    .map(|c| c.content_hash == content_hash)
-                    .unwrap_or(false);
+                    .expect("parsed cache present")
+                    .elements
+                    .clone()
+            } else {
+                let parsed = self.parse_elements();
+                self.cache.parsed = Some(ParsedCache {
+                    content_hash,
+                    elements: parsed.clone(),
+                });
+                parsed
+            };
 
-                let elements = if parsed_cache_valid {
-                    self.cache
-                        .parsed
-                        .as_ref()
-                        .expect("parsed cache present")
-                        .elements
-                        .clone()
-                } else {
-                    let parsed = self.parse_elements();
-                    self.cache.parsed = Some(ParsedCache {
-                        content_hash,
-                        elements: parsed.clone(),
-                    });
-                    parsed
-                };
+            let render_options = RenderOptions {
+                show_line_numbers,
+                theme,
+                app_theme: self.app_theme.as_ref(),
+                show_heading_collapse: self.display.show_heading_collapse,
+            };
 
-                let render_options = RenderOptions {
-                    show_line_numbers,
-                    theme,
-                    app_theme: self.app_theme.as_ref(),
-                    show_heading_collapse: self.display.show_heading_collapse,
-                };
+            let filter_lower = self
+                .filter_mode
+                .then(|| self.filter.as_deref().unwrap_or("").to_lowercase());
 
-                let filter_lower = self
-                    .filter_mode
-                    .then(|| self.filter.as_deref().unwrap_or("").to_lowercase());
+            let mut lines: Vec<Line<'static>> = Vec::new();
+            let mut boundaries: Vec<(usize, usize)> = Vec::new();
+            let mut source_lines: Vec<usize> = Vec::new();
 
-                let mut lines: Vec<Line<'static>> = Vec::new();
-                let mut boundaries: Vec<(usize, usize)> = Vec::new();
-
-                for (idx, element) in elements.iter().enumerate() {
-                    if !should_render_line(element, idx, &self.collapse) {
-                        continue;
-                    }
-
-                    if let Some(ref filter) = filter_lower {
-                        let text = element_to_plain_text_for_filter(&element.kind).to_lowercase();
-                        if !text.contains(filter) {
-                            continue;
-                        }
-                    }
-
-                    let start_idx = lines.len();
-                    let rendered = render_with_options(element, width, render_options);
-                    let line_count = rendered.len();
-                    lines.extend(rendered);
-                    boundaries.push((start_idx, line_count));
+            for (idx, element) in elements.iter().enumerate() {
+                if !should_render_line(element, idx, &self.collapse) {
+                    continue;
                 }
 
-                self.cache.render = Some(RenderCache {
-                    content_hash,
-                    width,
-                    show_line_numbers,
-                    theme,
-                    app_theme_hash,
-                    show_heading_collapse,
-                    lines: lines.clone(),
-                    line_boundaries: boundaries.clone(),
-                });
+                if let Some(ref filter) = filter_lower {
+                    let text = element_to_plain_text_for_filter(&element.kind).to_lowercase();
+                    if !text.contains(filter) {
+                        continue;
+                    }
+                }
 
-                (lines, boundaries)
-            };
+                let start_idx = lines.len();
+                let rendered = render_with_options(element, width, render_options);
+                let line_count = rendered.len();
+                let source_line = element.source_line.max(1);
+                lines.extend(rendered);
+                source_lines.extend(std::iter::repeat(source_line).take(line_count));
+                boundaries.push((start_idx, line_count));
+            }
+
+            self.cache.render = Some(RenderCache {
+                content_hash,
+                width,
+                show_line_numbers,
+                theme,
+                app_theme_hash,
+                show_heading_collapse,
+                lines: lines.clone(),
+                line_boundaries: boundaries.clone(),
+                line_source_lines: source_lines.clone(),
+            });
+
+            (lines, boundaries, source_lines)
+        };
 
         self.scroll.update_total_lines(all_lines.len());
         self.rendered_lines = all_lines.clone();
 
-        let start = self.scroll.scroll_offset.min(all_lines.len());
-        let end = (self.scroll.scroll_offset + content_area.height as usize).min(all_lines.len());
-        let visible_lines: Vec<Line<'static>> = all_lines[start..end].to_vec();
-
-        let visible_lines = if self.selection_active {
-            apply_selection_highlighting(visible_lines, &self.selection, self.scroll.scroll_offset)
+        let current_visual_line = self.scroll.current_line.saturating_sub(1);
+        let decorated_lines = if self.selection_active {
+            apply_selection_highlighting(all_lines.clone(), &self.selection, 0)
         } else {
-            visible_lines
+            all_lines.clone()
         };
 
-        let current_visual_line = self.scroll.current_line.saturating_sub(1);
-
-        let final_lines: Vec<Line<'_>> = if self.display.show_document_line_numbers {
+        let final_lines: Vec<Line<'static>> = if self.display.show_document_line_numbers() {
             let theme_colors = self.display.code_block_theme.colors();
             let line_num_style = Style::default()
                 .fg(theme_colors.line_number)
@@ -254,11 +264,10 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 }
             }
 
-            visible_lines
+            decorated_lines
                 .into_iter()
                 .enumerate()
-                .map(|(i, mut line)| {
-                    let visual_idx = start + i;
+                .map(|(visual_idx, mut line)| {
                     let is_current = visual_idx == current_visual_line;
                     let (logical_num, is_first) = visual_to_logical
                         .get(visual_idx)
@@ -313,11 +322,10 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 CURRENT_LINE_BG
             };
 
-            visible_lines
+            decorated_lines
                 .into_iter()
                 .enumerate()
-                .map(|(i, mut line)| {
-                    let visual_idx = start + i;
+                .map(|(visual_idx, mut line)| {
                     let is_current = visual_idx == current_visual_line;
 
                     if is_current {
@@ -346,35 +354,21 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 .collect()
         };
 
-        for (i, line) in final_lines.iter().enumerate() {
-            if i < content_area.height as usize {
-                let y = content_area.y + i as u16;
-                let mut x = content_area.x;
-                for span in &line.spans {
-                    let used = x.saturating_sub(content_area.x);
-                    let remaining = content_area.width.saturating_sub(used) as usize;
-                    if remaining == 0 {
-                        break;
-                    }
-
-                    let mut clipped = String::new();
-                    let mut clipped_width = 0usize;
-                    for ch in span.content.chars() {
-                        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
-                        if clipped_width + ch_width > remaining {
-                            break;
-                        }
-                        clipped.push(ch);
-                        clipped_width += ch_width;
-                    }
-
-                    if !clipped.is_empty() {
-                        buf.set_string(x, y, clipped, span.style);
-                        x = x.saturating_add(clipped_width as u16);
-                    }
-                }
-            }
-        }
+        let markdown_document = markdown_lines_to_document_with_source_lines(
+            final_lines,
+            line_source_lines,
+            &self.content,
+        );
+        let viewer_scroll = markdown_scroll_to_viewer_scroll(
+            &self.scroll,
+            current_visual_line,
+            markdown_document.line_count(),
+        );
+        let mut viewer_display = markdown_display_to_viewer_display(&self.display);
+        viewer_display.show_line_numbers = false;
+        viewer_display.highlight_current_line = false;
+        let viewer = DocumentViewerWidget::new(markdown_document, viewer_display);
+        viewer.render(content_area, buf, &viewer_scroll);
 
         if let Some(ov_area) = overlay_area {
             let mut auto_state = TocState::from_content(&self.content);
