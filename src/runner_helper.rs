@@ -5,7 +5,10 @@ use std::time::{Duration, Instant};
 
 use crossterm::{
     cursor::Show,
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyboardEnhancementFlags,
+        PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+    },
     execute,
     style::Print,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -60,6 +63,7 @@ pub fn run<A: CoordinatorApp>(app: A, config: RunnerConfig) -> io::Result<()> {
     execute!(
         stdout,
         EnterAlternateScreen,
+        PushKeyboardEnhancementFlags(keyboard_enhancement_flags()),
         EnableMouseCapture,
         Print("\x1b[?1006h\x1b[?1003h")
     )?;
@@ -71,6 +75,7 @@ pub fn run<A: CoordinatorApp>(app: A, config: RunnerConfig) -> io::Result<()> {
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
+        PopKeyboardEnhancementFlags,
         LeaveAlternateScreen,
         DisableMouseCapture,
         Print("\x1b[?1003l\x1b[?1006l")
@@ -89,6 +94,7 @@ pub fn run_with_diagnostics<A: CoordinatorApp>(app: A, config: RunnerConfig) -> 
     execute!(
         stdout,
         EnterAlternateScreen,
+        PushKeyboardEnhancementFlags(keyboard_enhancement_flags()),
         EnableMouseCapture,
         Print("\x1b[?1006h\x1b[?1003h")
     )?;
@@ -100,6 +106,7 @@ pub fn run_with_diagnostics<A: CoordinatorApp>(app: A, config: RunnerConfig) -> 
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
+        PopKeyboardEnhancementFlags,
         LeaveAlternateScreen,
         DisableMouseCapture,
         Print("\x1b[?1003l\x1b[?1006l")
@@ -107,6 +114,11 @@ pub fn run_with_diagnostics<A: CoordinatorApp>(app: A, config: RunnerConfig) -> 
     terminal.show_cursor()?;
 
     result
+}
+
+/// Returns terminal keyboard flags needed to report Command/Super modifier keys.
+fn keyboard_enhancement_flags() -> KeyboardEnhancementFlags {
+    KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
 }
 
 fn run_loop<A: CoordinatorApp>(
