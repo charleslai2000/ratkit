@@ -1,5 +1,8 @@
-//! Code diff viewer for ratatui
+//! Code diff viewer for ratatui.
 
 pub mod code_diff;
 
-pub use code_diff::{CodeDiff, DiffConfig, DiffHunk, DiffLine, DiffLineKind, DiffStyle};
+pub use code_diff::{
+    ChangeType, CodeDiff, DiffConfig, DiffFile, DiffFileStatus, DiffHunk, DiffLine, DiffLineCell,
+    DiffLineKind, DiffStyle, InlineSegment, SideBySideRow,
+};
