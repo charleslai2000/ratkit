@@ -1,3 +1,5 @@
+#![cfg(any(feature = "code-widget", feature = "markdown-preview"))]
+
 use ratkit::widgets::document_viewer::ScrollState;
 
 #[test]
