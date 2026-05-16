@@ -89,4 +89,32 @@ pub enum MarkdownEvent {
         /// The line that was focused when filter mode was exited.
         line: usize,
     },
+
+    /// The markdown comment popup was opened, closed, or retargeted.
+    CommentPopupToggled {
+        /// Whether the popup is now active.
+        active: bool,
+        /// One-indexed source line targeted by the popup.
+        line: usize,
+    },
+
+    /// The markdown comment popup draft changed and should be redrawn.
+    CommentPopupChanged {
+        /// One-indexed source line targeted by the popup.
+        line: usize,
+    },
+
+    /// A markdown line comment was submitted from the popup.
+    CommentSubmitted {
+        /// One-indexed source line for the comment.
+        line: usize,
+        /// Stable hash for the commented line text.
+        line_hash: String,
+        /// Snapshot of the commented line text.
+        line_text: String,
+        /// Multiline comment text entered by the user.
+        comment_text: String,
+        /// Opaque host-owned storage reference.
+        storage_ref: Option<String>,
+    },
 }

@@ -4,8 +4,9 @@ use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::scro
 use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::toc::TocConfig;
 use crate::widgets::markdown_preview::widgets::markdown_widget::foundation::types::GitStats;
 use crate::widgets::markdown_preview::widgets::markdown_widget::state::{
-    CacheState, CollapseState, DisplaySettings, DoubleClickState, ExpandableState, GitStatsState,
-    MarkdownState, ScrollState, SelectionState, SourceState, TocState, VimState,
+    CacheState, CollapseState, CommentPopupConfig, CommentPopupState, DisplaySettings,
+    DoubleClickState, ExpandableState, GitStatsState, MarkdownState, ScrollState, SelectionState,
+    SourceState, TocState, VimState,
 };
 use crate::widgets::markdown_preview::widgets::markdown_widget::widget::{
     MarkdownWidget, MarkdownWidgetMode, FRONTMATTER_SECTION_ID,
@@ -58,6 +59,9 @@ impl<'a> MarkdownWidget<'a> {
             last_double_click: None,
             filter: state.filter.clone(),
             filter_mode: state.filter_mode,
+            comment_popup: CommentPopupState::default(),
+            comment_popup_config: CommentPopupConfig::default(),
+            line_comments: Vec::new(),
             bordered: false,
             has_pane: true,
             pane: None,
@@ -111,6 +115,9 @@ impl<'a> MarkdownWidget<'a> {
             last_double_click: None,
             filter: None,
             filter_mode: false,
+            comment_popup: CommentPopupState::default(),
+            comment_popup_config: CommentPopupConfig::default(),
+            line_comments: Vec::new(),
             bordered: false,
             has_pane: true,
             pane: None,

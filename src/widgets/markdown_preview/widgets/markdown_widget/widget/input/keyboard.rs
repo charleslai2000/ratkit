@@ -8,8 +8,16 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 impl<'a> MarkdownWidget<'a> {
     pub fn handle_key_event(&mut self, key: KeyEvent) -> MarkdownEvent {
+        if self.comment_popup.active {
+            return self.handle_comment_popup_key(key);
+        }
+
         if self.filter_mode {
             return self.handle_filter_key(key);
+        }
+
+        if self.comment_popup_config.toggle_hotkey.matches(&key) {
+            return self.toggle_comment_popup_for_current_line();
         }
 
         if key.code == KeyCode::Esc && self.selection.is_active() {

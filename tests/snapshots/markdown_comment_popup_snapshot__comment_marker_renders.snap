@@ -1,0 +1,14 @@
+---
+source: tests/markdown_comment_popup_snapshot.rs
+expression: marker_snapshot
+---
+00| 󰲡 Title                                               ●|
+01|                                                        |
+02|Body line                                               |
+03|                                                        |
+04|                                                        |
+05|                                                        |
+06|                                                        |
+07|                                                        |
+08|                                                        |
+09|                                                        |

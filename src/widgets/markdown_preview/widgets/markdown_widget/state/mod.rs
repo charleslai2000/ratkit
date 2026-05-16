@@ -17,6 +17,7 @@
 // Focused state modules
 pub mod cache;
 pub mod collapse;
+pub mod comment_popup;
 pub mod display_settings;
 pub mod double_click;
 pub mod expandable;
@@ -31,6 +32,9 @@ pub mod vim;
 // State exports
 pub use cache::{CacheState, ParsedCache, RenderCache};
 pub use collapse::CollapseState;
+pub use comment_popup::{
+    CommentHotkey, CommentPopupConfig, CommentPopupState, MarkdownLineComment,
+};
 pub use display_settings::DisplaySettings;
 pub use double_click::DoubleClickState;
 pub use expandable::{ExpandableEntry, ExpandableState};

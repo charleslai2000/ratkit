@@ -151,6 +151,7 @@ pub use markdown_viewer_state_adapter::{
     markdown_display_to_viewer_display, markdown_scroll_to_viewer_scroll,
     markdown_source_to_viewer_source,
 };
+pub use widget::markdown_line_content_hash;
 pub use widget::MarkdownWidget;
 pub use widget::MarkdownWidgetMode;
 
@@ -159,8 +160,9 @@ pub use widget::MarkdownWidgetMode;
 // ============================================================================
 
 pub use state::{
-    CacheState, CollapseState, DisplaySettings, DoubleClickState, ExpandableEntry, ExpandableState,
-    GitStatsState, MarkdownState, ParsedCache, RenderCache, ScrollState, SelectionState,
+    CacheState, CollapseState, CommentHotkey, CommentPopupConfig, CommentPopupState,
+    DisplaySettings, DoubleClickState, ExpandableEntry, ExpandableState, GitStatsState,
+    MarkdownLineComment, MarkdownState, ParsedCache, RenderCache, ScrollState, SelectionState,
     SourceState, TocEntry, TocState, VimState,
 };
 

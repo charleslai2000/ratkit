@@ -7,6 +7,7 @@ mod line_info;
 mod render;
 mod state_sync;
 
+pub use crate::widgets::markdown_preview::widgets::markdown_widget::widget::features::comments::line_content_hash as markdown_line_content_hash;
 pub use crate::widgets::markdown_preview::widgets::markdown_widget::widget::features::filter::element_to_plain_text_for_filter;
 pub use crate::widgets::markdown_preview::widgets::markdown_widget::widget::features::selection::apply_selection_highlighting;
 pub use crate::widgets::markdown_preview::widgets::markdown_widget::widget::state_sync::WidgetStateSync;
@@ -18,8 +19,9 @@ use crate::widgets::markdown_preview::widgets::markdown_widget::extensions::toc:
 use crate::widgets::markdown_preview::widgets::markdown_widget::foundation::events::MarkdownEvent;
 use crate::widgets::markdown_preview::widgets::markdown_widget::foundation::types::GitStats;
 use crate::widgets::markdown_preview::widgets::markdown_widget::state::{
-    CacheState, CollapseState, DisplaySettings, DoubleClickState, ExpandableState, GitStatsState,
-    ScrollState, SelectionState, SourceState, TocState, VimState,
+    CacheState, CollapseState, CommentPopupConfig, CommentPopupState, DisplaySettings,
+    DoubleClickState, ExpandableState, GitStatsState, MarkdownLineComment, ScrollState,
+    SelectionState, SourceState, TocState, VimState,
 };
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -59,6 +61,9 @@ pub struct MarkdownWidget<'a> {
     pub(crate) last_double_click: Option<(usize, String, String)>,
     pub(crate) filter: Option<String>,
     pub(crate) filter_mode: bool,
+    pub(crate) comment_popup: CommentPopupState,
+    pub(crate) comment_popup_config: CommentPopupConfig,
+    pub(crate) line_comments: Vec<MarkdownLineComment>,
     pub(crate) bordered: bool,
     pub(crate) has_pane: bool,
     pub(crate) pane: Option<Pane<'a>>,
@@ -73,6 +78,7 @@ pub enum MarkdownWidgetMode {
     Normal,
     Drag,
     Filter,
+    CommentPopup,
 }
 
 impl MarkdownWidget<'_> {

@@ -12,6 +12,9 @@ use crate::widgets::markdown_preview::widgets::markdown_widget::markdown_viewer_
 use crate::widgets::markdown_preview::widgets::markdown_widget::state::{ParsedCache, RenderCache};
 use crate::widgets::markdown_preview::widgets::markdown_widget::widget::features::filter::element_to_plain_text_for_filter;
 use crate::widgets::markdown_preview::widgets::markdown_widget::widget::features::selection::apply_selection_highlighting;
+use crate::widgets::markdown_preview::widgets::markdown_widget::widget::render::comments::{
+    apply_comment_gutter, comment_gutter_width, marker_for_source_line, render_comment_popup,
+};
 use crate::widgets::markdown_preview::widgets::markdown_widget::widget::{
     MarkdownWidget, CURRENT_LINE_BG, CURRENT_LINE_DRAG_BG,
 };
@@ -111,7 +114,10 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
             0
         };
 
-        let width = (content_area.width as usize).saturating_sub(line_num_width);
+        let comment_gutter = comment_gutter_width(!self.line_comments.is_empty());
+        let width = (content_area.width as usize)
+            .saturating_sub(line_num_width)
+            .saturating_sub(comment_gutter);
         let content_hash = hash_content(&self.content);
         let show_line_numbers = self.display.show_line_numbers;
         let theme = self.display.code_block_theme;
@@ -184,7 +190,6 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 .then(|| self.filter.as_deref().unwrap_or("").to_lowercase());
 
             let mut lines: Vec<Line<'static>> = Vec::new();
-            let mut boundaries: Vec<(usize, usize)> = Vec::new();
             let mut source_lines: Vec<usize> = Vec::new();
 
             for (idx, element) in elements.iter().enumerate() {
@@ -199,13 +204,11 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                     }
                 }
 
-                let start_idx = lines.len();
                 let rendered = render_with_options(element, width, render_options);
                 let line_count = rendered.len();
                 let source_line = element.source_line.max(1);
                 lines.extend(rendered);
                 source_lines.extend(std::iter::repeat(source_line).take(line_count));
-                boundaries.push((start_idx, line_count));
             }
 
             self.cache.render = Some(RenderCache {
@@ -216,7 +219,6 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                 app_theme_hash,
                 show_heading_collapse,
                 lines,
-                line_boundaries: boundaries,
                 line_source_lines: source_lines,
             });
         }
@@ -229,6 +231,14 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
 
         let current_visual_line = self.scroll.current_line.saturating_sub(1);
         let visible_range = self.scroll.visible_range(content_area.height as usize);
+        let visible_scrollbar_width =
+            if self.show_scrollbar && self.scroll.total_lines > content_area.height as usize {
+                self.scrollbar_config.width as usize
+            } else {
+                0
+            };
+        let decorated_content_width =
+            (content_area.width as usize).saturating_sub(visible_scrollbar_width);
         let decorated_lines = self
             .selection_active
             .then(|| apply_selection_highlighting(render_cache.lines.clone(), &self.selection, 0));
@@ -249,17 +259,27 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                         .and_then(|lines| lines.get(visual_idx))
                         .or_else(|| render_cache.lines.get(visual_idx))?
                         .clone();
-                    let (logical_num, is_first) =
-                        visual_to_logical_line(&render_cache.line_boundaries, visual_idx)
-                            .unwrap_or((visual_idx + 1, true));
-                    Some(decorate_markdown_line(
-                        line,
-                        visual_idx,
-                        current_visual_line,
-                        Some((logical_num, is_first, line_num_style, border_style)),
-                        self.selection_active,
-                        content_area.width as usize,
-                        line_num_width,
+                    let source_line = render_cache
+                        .line_source_lines
+                        .get(visual_idx)
+                        .copied()
+                        .unwrap_or_else(|| visual_idx.saturating_add(1));
+                    let is_first =
+                        is_first_visual_line_for_source_line(render_cache, visual_idx, source_line);
+                    let marker =
+                        first_marker_for_visual_line(self, render_cache, visual_idx, source_line);
+                    Some(apply_comment_gutter(
+                        decorate_markdown_line(
+                            line,
+                            visual_idx,
+                            current_visual_line,
+                            Some((source_line, is_first, line_num_style, border_style)),
+                            self.selection_active,
+                            decorated_content_width,
+                            line_num_width + comment_gutter,
+                        ),
+                        marker,
+                        decorated_content_width,
                     ))
                 })
                 .collect()
@@ -272,14 +292,25 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
                         .and_then(|lines| lines.get(visual_idx))
                         .or_else(|| render_cache.lines.get(visual_idx))?
                         .clone();
-                    Some(decorate_markdown_line(
-                        line,
-                        visual_idx,
-                        current_visual_line,
-                        None,
-                        self.selection_active,
-                        content_area.width as usize,
-                        line_num_width,
+                    let source_line = render_cache
+                        .line_source_lines
+                        .get(visual_idx)
+                        .copied()
+                        .unwrap_or_else(|| visual_idx.saturating_add(1));
+                    let marker =
+                        first_marker_for_visual_line(self, render_cache, visual_idx, source_line);
+                    Some(apply_comment_gutter(
+                        decorate_markdown_line(
+                            line,
+                            visual_idx,
+                            current_visual_line,
+                            None,
+                            self.selection_active,
+                            decorated_content_width,
+                            comment_gutter,
+                        ),
+                        marker,
+                        decorated_content_width,
                     ))
                 })
                 .collect()
@@ -324,6 +355,8 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
             toc.render(ov_area, buf);
         }
 
+        render_comment_popup(self, content_area, buf);
+
         if let Some(sl_area) = statusline_area {
             self.render_statusline(sl_area, buf);
         }
@@ -348,17 +381,31 @@ impl<'a> Widget for &mut MarkdownWidget<'a> {
     }
 }
 
-/// Maps a rendered visual line index to its logical markdown line number.
-fn visual_to_logical_line(
-    line_boundaries: &[(usize, usize)],
+/// Returns the comment marker only for the first visible visual line of a source line.
+fn first_marker_for_visual_line(
+    widget: &MarkdownWidget<'_>,
+    render_cache: &RenderCache,
     visual_idx: usize,
-) -> Option<(usize, bool)> {
-    let candidate = line_boundaries
-        .partition_point(|(start_idx, _count)| *start_idx <= visual_idx)
-        .checked_sub(1)?;
-    let (start_idx, count) = line_boundaries.get(candidate).copied()?;
-    (visual_idx < start_idx.saturating_add(count))
-        .then_some((candidate.saturating_add(1), visual_idx == start_idx))
+    source_line: usize,
+) -> Option<&'static str> {
+    if !is_first_visual_line_for_source_line(render_cache, visual_idx, source_line) {
+        return None;
+    }
+    marker_for_source_line(widget, source_line)
+}
+
+/// Returns true when a visual line is the first visible row for its source line.
+fn is_first_visual_line_for_source_line(
+    render_cache: &RenderCache,
+    visual_idx: usize,
+    source_line: usize,
+) -> bool {
+    visual_idx == 0
+        || render_cache
+            .line_source_lines
+            .get(visual_idx.saturating_sub(1))
+            .copied()
+            != Some(source_line)
 }
 
 /// Adds optional document line numbers and current-line highlighting to one visible line.
@@ -379,9 +426,9 @@ fn decorate_markdown_line(
     };
     let is_current = visual_idx == current_visual_line;
     let mut new_spans = Vec::new();
-    if let Some((logical_num, is_first, line_num_style, border_style)) = line_number {
+    if let Some((source_line, is_first, line_num_style, border_style)) = line_number {
         let num_str = if is_first {
-            format!("{:>3} ", logical_num)
+            format!("{:>3} ", source_line)
         } else {
             "    ".to_string()
         };

@@ -115,8 +115,6 @@ pub struct RenderCache {
     pub show_heading_collapse: bool,
     /// Cached rendered lines.
     pub lines: Vec<Line<'static>>,
-    /// Line boundaries: (start_visual_idx, visual_line_count) for each logical line.
-    pub line_boundaries: Vec<(usize, usize)>,
     /// Original markdown source line for each rendered visual line.
     pub line_source_lines: Vec<usize>,
 }
@@ -132,7 +130,6 @@ impl RenderCache {
         app_theme_hash: u64,
         show_heading_collapse: bool,
         lines: Vec<Line<'static>>,
-        line_boundaries: Vec<(usize, usize)>,
         line_source_lines: Vec<usize>,
     ) -> Self {
         Self {
@@ -143,7 +140,6 @@ impl RenderCache {
             app_theme_hash,
             show_heading_collapse,
             lines,
-            line_boundaries,
             line_source_lines,
         }
     }

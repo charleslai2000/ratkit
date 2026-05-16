@@ -37,6 +37,14 @@ impl<'a> MarkdownWidget<'a> {
                 let filter_text = self.filter.as_deref().unwrap_or("");
                 (format!(" /{} ", filter_text), color)
             }
+            MarkdownWidgetMode::CommentPopup => {
+                let color = self
+                    .app_theme
+                    .as_ref()
+                    .map(|t| t.warning)
+                    .unwrap_or(Color::Rgb(229, 192, 123));
+                (" COMMENT ".to_string(), color)
+            }
         };
 
         let file_bg = self

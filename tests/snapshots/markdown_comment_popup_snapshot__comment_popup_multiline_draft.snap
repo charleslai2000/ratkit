@@ -1,0 +1,14 @@
+---
+source: tests/markdown_comment_popup_snapshot.rs
+expression: snapshot
+---
+00| 󰲡 Title                                                |
+01|  ╭ Comment line 1 ──────────────────────────────────╮  |
+02|Bo│hi                                                │  |
+03|  │x                                                 │  |
+04|  ╰──────────────────────────────────────────────────╯  |
+05|                                                        |
+06|                                                        |
+07|                                                        |
+08|                                                        |
+09|                                                        |

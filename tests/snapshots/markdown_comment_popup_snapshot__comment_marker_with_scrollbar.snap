@@ -1,0 +1,10 @@
+---
+source: tests/markdown_comment_popup_snapshot.rs
+expression: marker_snapshot
+---
+00|line 1                                ●█|
+01|line 2                                 ░|
+02|line 3                                 ░|
+03|line 4                                 ░|
+04|line 5                                 ░|
+05|line 6                                 ░|

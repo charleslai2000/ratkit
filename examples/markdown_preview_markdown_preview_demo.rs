@@ -8,6 +8,9 @@ use std::io;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+#[path = "markdown_preview_demo/comments/mod.rs"]
+mod comments;
+
 use crossterm::event::{
     KeyCode, KeyEvent as CrosstermKeyEvent, KeyEventState, MouseEvent as CrosstermMouseEvent,
 };
@@ -23,8 +26,11 @@ use ratkit::prelude::{
 };
 use ratkit::widgets::markdown_preview::{
     CacheState, CollapseState, DisplaySettings, DoubleClickState, ExpandableState, GitStatsState,
-    MarkdownEvent, MarkdownWidget, ScrollState, SelectionState, SourceState, VimState,
+    MarkdownEvent, MarkdownLineComment, MarkdownWidget, ScrollState, SelectionState, SourceState,
+    VimState,
 };
+
+use comments::{load_comments, save_comments};
 
 struct MarkdownPreviewDemo {
     widget: MarkdownWidget<'static>,
@@ -38,6 +44,7 @@ struct MarkdownPreviewDemo {
     last_move_processed: Instant,
     toast_message: Option<String>,
     toast_expires_at: Option<Instant>,
+    line_comments: Vec<MarkdownLineComment>,
     startup_started_at: Instant,
     startup_probe: bool,
     startup_reported: bool,
@@ -60,7 +67,12 @@ impl MarkdownPreviewDemo {
         let mut display = DisplaySettings::default();
         display.set_show_document_line_numbers(true);
 
-        let widget = MarkdownWidget::new(
+        let line_comments = load_comments().unwrap_or_else(|error| {
+            eprintln!("Failed to load markdown demo comments from /tmp: {error}");
+            Vec::new()
+        });
+
+        let mut widget = MarkdownWidget::new(
             markdown_content,
             scroll,
             source,
@@ -78,6 +90,7 @@ impl MarkdownPreviewDemo {
         .show_toc(true)
         .show_scrollbar(true)
         .show_statusline(true);
+        widget.set_line_comments(line_comments.clone());
 
         Self {
             widget,
@@ -91,6 +104,7 @@ impl MarkdownPreviewDemo {
             last_move_processed: Instant::now(),
             toast_message: None,
             toast_expires_at: None,
+            line_comments,
             startup_started_at,
             startup_probe,
             startup_reported: false,
@@ -101,6 +115,32 @@ impl MarkdownPreviewDemo {
     fn show_toast(&mut self, message: impl Into<String>) {
         self.toast_message = Some(message.into());
         self.toast_expires_at = Some(Instant::now() + Duration::from_secs(2));
+    }
+
+    /// Inserts or updates a line comment, then persists the demo comment store.
+    fn upsert_line_comment(
+        &mut self,
+        line: usize,
+        line_hash: String,
+        line_text: String,
+        comment_text: String,
+    ) -> io::Result<()> {
+        if let Some(existing) = self.line_comments.iter_mut().find(|comment| {
+            comment.line == line && comment.line_hash == line_hash && comment.line_text == line_text
+        }) {
+            existing.comment_count = existing.comment_count.saturating_add(1);
+            existing.comment_text = Some(comment_text);
+        } else {
+            self.line_comments.push(MarkdownLineComment {
+                line,
+                line_hash,
+                line_text,
+                comment_count: 1,
+                comment_text: Some(comment_text),
+            });
+        }
+        self.widget.set_line_comments(self.line_comments.clone());
+        save_comments(&self.line_comments)
     }
 
     fn clear_expired_toast(&mut self) -> bool {
@@ -165,12 +205,33 @@ impl CoordinatorApp for MarkdownPreviewDemo {
                 };
 
                 let markdown_event = self.widget.handle_key(key_event);
-                let copied_chars = match &markdown_event {
-                    MarkdownEvent::Copied { text } => Some(text.chars().count()),
-                    _ => None,
-                };
-                if let Some(copied_chars) = copied_chars {
-                    self.show_toast(format!("Copied {} chars to clipboard", copied_chars));
+                match &markdown_event {
+                    MarkdownEvent::Copied { text } => {
+                        self.show_toast(format!(
+                            "Copied {} chars to clipboard",
+                            text.chars().count()
+                        ));
+                    }
+                    MarkdownEvent::CommentSubmitted {
+                        line,
+                        line_hash,
+                        line_text,
+                        comment_text,
+                        ..
+                    } => {
+                        match self.upsert_line_comment(
+                            *line,
+                            line_hash.clone(),
+                            line_text.clone(),
+                            comment_text.clone(),
+                        ) {
+                            Ok(()) => {
+                                self.show_toast(format!("Comment saved on line {} in /tmp", line))
+                            }
+                            Err(error) => self.show_toast(format!("Comment save failed: {error}")),
+                        }
+                    }
+                    _ => {}
                 }
                 if matches!(markdown_event, MarkdownEvent::None) {
                     Ok(CoordinatorAction::Continue)

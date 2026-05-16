@@ -1,0 +1,12 @@
+---
+source: tests/markdown_comment_popup_snapshot.rs
+expression: popup_snapshot
+---
+00|  1 │  󰲡 Title                                                        |
+01|    │                                                                 |
+02|  ╭ Comment line 5 ────────────────────────────────────────────────╮  |
+03|  │█                                                               │  |
+04|  ╰────────────────────────────────────────────────────────────────╯  |
+05|  5 │ After paragraph                                                 |
+06|                                                                      |
+07|                                                                      |
