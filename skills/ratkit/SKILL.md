@@ -3,7 +3,7 @@ name: ratkit
 description: Comprehensive guide for the ratkit Rust TUI component library built on ratatui 0.29, including feature flags, APIs, and implementation patterns. Use when building, debugging, or extending ratkit applications and examples.
 compatibility: Requires Rust 1.70+, Cargo, just, and a terminal environment for interactive TUI demos.
 metadata:
-  version: "0.2.16"
+  version: "0.2.17"
 ---
 
 # ratkit
@@ -116,7 +116,7 @@ The directory `skills/ratkit/documentation/` contains **in-depth integration gui
 ```toml
 # Cargo.toml - enable specific features
 [dependencies]
-ratkit = { version = "0.2.16", features = ["button", "dialog", "pane"] }
+ratkit = { version = "0.2.17", features = ["button", "dialog", "pane"] }
 ```
 
 ```rust
@@ -575,5 +575,5 @@ Use this section to transfer the demo's responsiveness patterns into other ratki
 
 ### Version
 
-- Current: 0.2.16
+- Current: 0.2.17
 - Rust: 1.70+
