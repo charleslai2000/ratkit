@@ -27,6 +27,41 @@ This file provides a complete reference for working with the ratkit codebase. Th
 11. **Validate before commits**: Run `just check` (format + lint + test) before committing
 12. **Verify feature flags**: Compilation errors often indicate missing feature flags in Cargo.toml
 
+## Documentation Reference
+
+The directory `skills/ratkit/documentation/` contains **in-depth integration guides** for every primitive and widget. When setting up a specific component, **read the corresponding documentation file** before writing code — these files contain the complete struct/enum API, feature-gate instructions, usage examples, and runnable demos.
+
+### Available documentation files
+
+| File | Component | Feature flag |
+|---|---|---|
+| `documentation/ai_chat_widget.md` | AI chat widget (async LLM streaming) | `ai-chat` |
+| `documentation/button.md` | Button primitive (hover-aware label) | `button` |
+| `documentation/code_diff_widget.md` | Code diff viewer (side-by-side hunks) | `code-diff` |
+| `documentation/code_widget_widget.md` | Code viewer (syntax highlighting, line numbers) | `code` |
+| `documentation/dialog.md` | Modal dialog (5 types, keyboard nav) | `dialog` |
+| `documentation/document_viewer_widget.md` | Document viewer (scrolling, TOC, selection) | `document-viewer` |
+| `documentation/file_system_tree_widget.md` | File system tree (watching, async loading) | `file-tree` |
+| `documentation/hotkey_footer_widget.md` | Hotkey footer (command palette) | `hotkey-footer` |
+| `documentation/markdown_widget.md` | Markdown preview (syntax highlighting) | `markdown-preview` |
+| `documentation/menu_bar.md` | Menu bar primitive | `menu` |
+| `documentation/pane.md` | Pane container (nested layouts) | `pane` |
+| `documentation/resizable_grid.md` | Resizable grid (drag split) | `grid` |
+| `documentation/scroll.md` | Scrollable container | `scroll` |
+| `documentation/statusline.md` | Status bar | `statusline` |
+| `documentation/termtui.md` | Terminal emulator | `terminal` |
+| `documentation/theme_picker_widget.md` | Theme picker (color palette) | `theme-picker` |
+| `documentation/toast.md` | Toast notifications | `toast` |
+| `documentation/tree_view.md` | Generic tree view (async, icons) | `tree-view` |
+
+### How to use
+
+1. Identify the component you need from the table above.
+2. Read `skills/ratkit/documentation/<component>.md` — it contains the complete API surface.
+3. Enable the corresponding feature flag in `Cargo.toml`.
+4. Follow the runnable example at the bottom of the doc file.
+5. Refer back to this SKILL.md for cross-cutting concerns (event loops, state persistence, feature dependencies).
+
 ## Environment and Version Constraints
 
 - Rust 1.70+ required (workspace.rust-version in Cargo.toml)
