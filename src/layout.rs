@@ -85,8 +85,8 @@ impl LayoutManager {
 
         match self.debounce_state {
             ResizeDebounceState::Pending {
-                pending_width,
-                pending_height,
+                pending_width: _,
+                pending_height: _,
                 scheduled_at,
             } => {
                 if scheduled_at.elapsed() >= self.resize_debounce {

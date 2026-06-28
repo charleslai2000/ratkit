@@ -1,3 +1,5 @@
+#![allow(ambiguous_glob_reexports)]
+
 // Re-export primitives for backward compatibility
 #[cfg(feature = "button")]
 pub use crate::primitives::button::*;

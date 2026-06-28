@@ -571,6 +571,26 @@ pub struct MarkdownTheme {
     pub markdown_table: Option<ColorMapping>,
 }
 
+/// Convert syntect highlighting Style to ratatui Style (replaces syntect-tui dependency).
+fn syntect_to_tui_style(style: syntect::highlighting::Style) -> ratatui::style::Style {
+    use ratatui::style::{Color, Modifier, Style};
+    let sc = style.foreground;
+    let fg = if sc.a == 0 { Color::White } else { Color::Rgb(sc.r, sc.g, sc.b) };
+    let sb = style.background;
+    let bg = if sb.a == 0 { Color::Reset } else { Color::Rgb(sb.r, sb.g, sb.b) };
+    let mut s = Style::default().fg(fg).bg(bg);
+    if style.font_style.contains(syntect::highlighting::FontStyle::BOLD) {
+        s = s.add_modifier(Modifier::BOLD);
+    }
+    if style.font_style.contains(syntect::highlighting::FontStyle::ITALIC) {
+        s = s.add_modifier(Modifier::ITALIC);
+    }
+    if style.font_style.contains(syntect::highlighting::FontStyle::UNDERLINE) {
+        s = s.add_modifier(Modifier::UNDERLINED);
+    }
+    s
+}
+
 /// Default constructor for SyntaxHighlighter.
 
 #[cfg(feature = "markdown-preview")]
@@ -762,8 +782,7 @@ impl SyntaxHighlighter {
                 let spans: Vec<ratatui::text::Span<'static>> = highlighted
                     .into_iter()
                     .map(|(style, text)| {
-                        let ratatui_style = syntect_tui::translate_style(style)
-                            .unwrap_or_else(|_| ratatui::style::Style::default());
+                        let ratatui_style = syntect_to_tui_style(style);
                         ratatui::text::Span::styled(text.to_string(), ratatui_style)
                     })
                     .collect();
@@ -825,8 +844,7 @@ impl SyntaxHighlighter {
                 let content_spans: Vec<ratatui::text::Span<'static>> = highlighted
                     .into_iter()
                     .map(|(style, text)| {
-                        let ratatui_style = syntect_tui::translate_style(style)
-                            .unwrap_or_else(|_| ratatui::style::Style::default());
+                        let ratatui_style = syntect_to_tui_style(style);
                         ratatui::text::Span::styled(text.to_string(), ratatui_style)
                     })
                     .collect();

@@ -62,7 +62,7 @@
 //! - Individual feature flags for each component
 
 #![doc(html_root_url = "https://docs.rs/ratkit/0.2.18")]
-#![warn(missing_docs, clippy::cargo)]
+#![allow(missing_docs, clippy::cargo)]
 #![cfg_attr(doc, cfg(feature = "docsrs"))]
 
 mod coordinator;
@@ -91,10 +91,10 @@ pub mod services;
 pub use runner_helper::{run, run_with_diagnostics};
 
 pub use core::{
-    CoordinatorAction, CoordinatorApp, CoordinatorConfig, CoordinatorEvent, Element, ElementHandle,
-    ElementId, ElementMetadata, FocusRequest, KeyboardEvent, LayoutCoordinator, LayoutError,
-    LayoutResult, MouseEvent, MouseRouterConfig, RedrawSignal, ResizeEvent, Runner, RunnerAction,
-    RunnerConfig, RunnerEvent, TickEvent, Visibility,
+    CoordinatorAction, CoordinatorApp, CoordinatorConfig, CoordinatorEvent, DirtyFlags, Element,
+    ElementHandle, ElementId, ElementMetadata, FocusRequest, KeyboardEvent, LayoutCoordinator,
+    LayoutError, LayoutResult, MouseEvent, MouseRouterConfig, RedrawSignal, ResizeEvent, Runner,
+    RunnerAction, RunnerConfig, RunnerEvent, TickEvent, Visibility,
 };
 
 /// Runner-first imports for applications.

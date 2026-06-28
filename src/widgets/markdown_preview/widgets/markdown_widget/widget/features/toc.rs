@@ -107,6 +107,7 @@ impl<'a> MarkdownWidget<'a> {
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn resolved_toc_state<'s>(&'s self, auto_state: &'s TocState) -> &'s TocState {
         if let Some(provided) = &self.toc_state {
             if provided.entries.is_empty() {

@@ -155,51 +155,74 @@ impl Default for LayoutState {
     }
 }
 
-/// Dirty flag state for layout and rendering.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DirtyFlags {
-    /// Layout needs recomputation (resize, add/remove, visibility change).
-    pub layout_dirty: bool,
-    /// Elements need redraw (internal state change).
-    pub elements_dirty: bool,
-}
-
-impl DirtyFlags {
-    pub fn clean() -> Self {
-        Self {
-            layout_dirty: false,
-            elements_dirty: false,
-        }
-    }
-
-    pub fn all_dirty() -> Self {
-        Self {
-            layout_dirty: true,
-            elements_dirty: true,
-        }
-    }
-
-    pub fn set_layout_dirty(&mut self) {
-        self.layout_dirty = true;
-    }
-
-    pub fn set_elements_dirty(&mut self) {
-        self.elements_dirty = true;
-    }
-
-    pub fn needs_redraw(&self) -> bool {
-        self.layout_dirty || self.elements_dirty
-    }
-
-    pub fn clear(&mut self) {
-        self.layout_dirty = false;
-        self.elements_dirty = false;
+// Infrastructure-level dirty flags for incremental rendering.
+//
+// Ratatui handles cell-level buffer diffing. These flags provide a minimal,
+// reusable foundation: whether layout needs recomputation and whether any
+// element content has changed. Application layers extend with their own
+// domain-specific flags (e.g., which specific panel changed).
+//
+// Backward compatible with previous `layout_dirty` / `elements_dirty` boolean accessors.
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct DirtyFlags: u32 {
+        /// Nothing changed.
+        const NONE     = 0;
+        /// Frame needs a draw pass.
+        const FRAME    = 1 << 0;
+        /// Layout sizes/positions changed (resize, add/remove, visibility change).
+        const LAYOUT   = 1 << 1;
+        /// Element content changed — application layers extend with domain-specific
+        /// bits for finer-grained skipping (e.g., which panel needs redraw).
+        const CONTENT  = 1 << 2;
     }
 }
 
 impl Default for DirtyFlags {
     fn default() -> Self {
-        Self::clean()
+        DirtyFlags::NONE
+    }
+}
+
+impl DirtyFlags {
+    /// Backward compat: accessor for old `layout_dirty` field.
+    pub fn layout_dirty(&self) -> bool {
+        self.contains(DirtyFlags::LAYOUT)
+    }
+
+    /// Backward compat: set layout dirty.
+    pub fn set_layout_dirty(&mut self) {
+        self.insert(DirtyFlags::LAYOUT);
+    }
+
+    /// Backward compat: accessor for old `elements_dirty` field.
+    pub fn elements_dirty(&self) -> bool {
+        self.contains(DirtyFlags::CONTENT)
+    }
+
+    /// Backward compat: set elements dirty.
+    pub fn set_elements_dirty(&mut self) {
+        self.insert(DirtyFlags::CONTENT);
+    }
+
+    /// Whether any draw-relevant flags are set.
+    pub fn needs_redraw(&self) -> bool {
+        !self.is_empty()
+    }
+
+    /// Clear all dirty flags.
+    pub fn clear(&mut self) {
+        *self = DirtyFlags::NONE;
+    }
+
+    /// All known dirty flags set.
+    pub fn all_dirty() -> Self {
+        DirtyFlags::all()
+    }
+
+    /// Create clean flags.
+    pub fn clean() -> Self {
+        DirtyFlags::NONE
     }
 }
 

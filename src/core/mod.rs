@@ -12,6 +12,6 @@ pub use crate::{
     mouse_router::MouseRouterConfig,
     redraw_signal::RedrawSignal,
     registry::{Element, ElementHandle},
-    types::{ElementId, ElementMetadata, Visibility},
+    types::{DirtyFlags, ElementId, ElementMetadata, Visibility},
 };
 pub use runner::{Runner, RunnerAction, RunnerConfig, RunnerEvent};

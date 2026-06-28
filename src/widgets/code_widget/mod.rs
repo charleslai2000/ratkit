@@ -6,6 +6,6 @@ pub mod state;
 pub mod widget;
 
 pub use foundation::{CodeEvent, CodeLanguage, CodeLine, CodeOutlineItem};
-pub use parser::{detect_language, extract_symbol_outline, highlight_code_lines};
+pub use parser::{detect_language, extract_symbol_outline, highlight_code_lines, highlight_code_lines_with_mode, HighlightColorMode};
 pub use state::CodeState;
 pub use widget::CodeWidget;
